@@ -46,7 +46,8 @@ module.exports = function(context) {
   try {
     PLUGINS = require(path.join(context.opts.projectRoot, 'pluginAutoUpgrade.json'));
   } catch(e) {
-    console.error("cordova-plugin-plugin-auto-upgrade requires `pluginAutoUpgrade.json` at the root of your project.");
+    console.error("Exception:", e);
+    console.error("Note: cordova-plugin-plugin-auto-upgrade requires valid `pluginAutoUpgrade.json` at the root of your project.");
   }
 
   return runCordovaCommand(["plugin", "ls"])
@@ -54,14 +55,20 @@ module.exports = function(context) {
       // TODO: plugin ls prints to console, try getting one of the below quite ways to work
       //var installedPlugins = context.cordova.plugins.map(function(s) { return s.toLowerCase(); })
       //var installedPlugins = context.cordova.cordova_lib.PluginInfo.loadPluginsDir(path.join(context.opts.projectRoot, 'plugins'));
-      var cmds = [];
+      var rmCmd= ["plugin", "rm"];
+      var addCmd= ["plugin", "add"];
 
       Object.keys(PLUGINS).forEach(function(pluginId) {
         if (installedPlugins.indexOf(pluginId) != -1) {
-          cmds.push(["plugin", "rm", pluginId]);
+          rmCmd.push(pluginId);
         }
-        cmds.push(["plugin", "add", resolvePath(PLUGINS[pluginId])]);
+        addCmd.push(resolvePath(PLUGINS[pluginId]));
       })
+
+      // We may not have anything to remove (i.e. if this is the first prepare), and we may not have anything to add (i.e. pluginAutoUpgrade.json is empty)
+      var cmds = [];
+      if (rmCmd.length > 2) cmds.push(rmCmd);
+      if (addCmd.length > 2) cmds.push(addCmd);
 
       return chainCordovaCommands(cmds);
     });
